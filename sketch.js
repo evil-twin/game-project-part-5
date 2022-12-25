@@ -100,13 +100,14 @@ function draw()
     // draw mountains
     drawMountains()
 
+    //draw canyons
     for(var i = 0; i < canyons.length; i++)
     {
         var canyon = canyons[i]
             
         //draw the canyon
         drawCanyon(canyon)
-            
+        
         //canyon interaction
         checkCanyon(canyon)
     }
@@ -114,6 +115,7 @@ function draw()
     // draw trees
     drawTrees()
 
+    //draw collectables
     for (var i = 0; i < collectables.length; i++)
     {
         var collectable = collectables[i]
