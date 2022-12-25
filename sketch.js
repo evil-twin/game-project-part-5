@@ -20,11 +20,12 @@ var isLeft;
 var isRight;
 var isFalling;
 var isPlummeting;
-var collectable;
-var canyon;
+var collectables;
+var canyons;
 var tree_x;
 var clouds;
 var cameraPosX;
+var cameraLimits;
 
 function setup()
 {
@@ -38,31 +39,49 @@ function setup()
     isFalling = false;
     isPlummeting = false;
     
-    collectable = {
-		x_pos: width / 2 - 200,
-		y_pos: floorPos_y,
-        isFound: false,
-	}
+    collectables = [
+        {
+            x_pos: 50,
+            y_pos: floorPos_y,
+            isFound: false,
+        },
+        {
+            x_pos: 800,
+            y_pos: floorPos_y,
+            isFound: false,
+        },
+        {
+            x_pos: 1300,
+            y_pos: floorPos_y,
+            isFound: false,
+        }
+    ]
     
-    canyon = {
-		x_pos: width - 400,
-		y_pos: height,
-		width: 150,
-		height: floorPos_y,
-	}
-    tree_x = [100, 400, 900]
+    canyons = [
+        {
+            x_pos: 650,
+            width: 130,
+        },
+        {
+            x_pos: 1500,
+            width: 180,
+        }
+    ]
+    tree_x = [0, 900, 1800]
     clouds = [
         { x: 100, size: 1 },
         { x: 300, size: 2 },
         { x: 800, size: 1 },
+        { x: 1300, size: 3 },
+        { x: 1800, size: 2 },
     ]
     mountains = [
-        {x: 0, size: 2},
-        {x: 260, size: 4},
+        {x: 200, size: 4},
         {x: 900, size: 5},
+        {x: 2000, size: 2},
     ]
+    cameraLimits = { left: 0, right: 2000 }
     cameraPosX = 0;
-
 }
 
 function draw()
@@ -74,42 +93,41 @@ function draw()
 
     push()
     translate(-cameraPosX, 0)
+
     // draw clouds
-    for (var i = 0; i < clouds.length; i++) {
-        drawClouds(clouds[i].x, 100, clouds[i].size)
-    }
+    drawClouds()
 
     // draw mountains
-    for (var i = 0; i < mountains.length; i++) {
-        drawMountains(mountains[i].x, floorPos_y, mountains[i].size)
-    }
-    
-	//draw the canyon
-    drawCanyon(canyon.x_pos, canyon.y_pos, canyon.width, canyon.height)
-    
-    // draw trees
-    for (var i = 0; i < tree_x.length; i++) {
-        drawTrees(tree_x[i], floorPos_y)
+    drawMountains()
+
+    for(var i = 0; i < canyons.length; i++)
+    {
+        var canyon = canyons[i]
+            
+        //draw the canyon
+        drawCanyon(canyon)
+            
+        //canyon interaction
+        checkCanyon(canyon)
     }
 
-    //draw the collectable
-    if (!collectable.isFound) { 
-	   drawCollactable(collectable.x_pos, collectable.y_pos)
-    }
-    
-    //collect the collectable
-    if (dist(collectable.x_pos, collectable.y_pos, gameChar_x, gameChar_y) < 24) {
-        collectable.isFound = true
-    }
-    
-    if (
-        gameChar_y > floorPos_y &&
-        gameChar_x > canyon.x_pos &&
-        gameChar_x < canyon.x_pos + canyon.width
+    // draw trees
+    drawTrees()
+
+    for (var i = 0; i < collectables.length; i++)
+    {
+        var collectable = collectables[i]
+
+        //draw the collectable
+        if (!collectable.isFound)
+        { 
+            drawCollectable(collectable)
+        }
         
-    ) {
-        isPlummeting = true
+        //collectable interaction
+        checkCollectable(collectable)
     }
+
     
     
 	//the game character
@@ -151,13 +169,22 @@ function draw()
     if (isLeft)
     {
         gameChar_x -= 4
-        cameraPosX -= 4
+
+        // prevent screen translate when reached left limit
+        if (gameChar_x > cameraLimits.left && gameChar_x < cameraLimits.right) {
+            cameraPosX -= 4
+        }
+        
     }
     
     if (isRight)
     {
-        cameraPosX += 4
         gameChar_x += 4
+        
+        // prevent screen translate when reached right limit
+        if (gameChar_x > cameraLimits.left && gameChar_x < cameraLimits.right) {
+            cameraPosX += 4
+        }
     }
 
     if ((gameChar_y > floorPos_y) && !isPlummeting)
@@ -178,55 +205,147 @@ function draw()
 
 }
 
-function drawClouds(x, y, size) {
+function drawClouds()
+{
+    var y = 100; // natural cloud position
     push()
     fill(255);
-    ellipse(x, y, 20 * size, 20 * size);
-    ellipse(x + 20 * size, y, 30 * size, 30 * size);
-    ellipse(x + 35 * size, y, 20 * size, 20 * size);
-    ellipse(x + 45 * size, y, 10 * size, 10 * size);
+
+    for (var i = 0; i < clouds.length; i++) {
+
+        var x = clouds[i].x
+        var size = clouds[i].size
+
+        ellipse(x, y, 20 * size, 20 * size);
+        ellipse(x + 20 * size, y, 30 * size, 30 * size);
+        ellipse(x + 35 * size, y, 20 * size, 20 * size);
+        ellipse(x + 45 * size, y, 10 * size, 10 * size);
+    }
+    
     pop()
 }
 
-function drawMountains(x, y, size) {
-	var scaleFactor = size / 5
+function drawMountains()
+{
+    var y = floorPos_y
 
 	push()
 	fill(100);
 
+    for (var i = 0; i < mountains.length; i++) {
+        var x = mountains[i].x
+        var scaleFactor = mountains[i].size / 5
+
+        triangle(
+            x,y,
+            x + 150 * scaleFactor , y - 182 * scaleFactor,
+            x + 300 * scaleFactor, y
+        );
+        triangle(
+            x - 50, y, 
+            x + 50 * scaleFactor, y - 102 * scaleFactor,
+            x + 250 * scaleFactor, y
+        );
+        triangle(
+            x - 50, y,
+            x + 200 * scaleFactor, y - 152 * scaleFactor,
+            x + 350 * scaleFactor, y
+        )
+        triangle(
+            x - 50, y,
+            x + 300 * scaleFactor, y - 72 * scaleFactor,
+            x + 410 * scaleFactor, y
+        );
+    }
+
+	pop()
+}
+
+function drawTrees()
+{
+	push()
+
+
+    for (var i = 0; i < tree_x.length; i++) {
+        var x = tree_x[i]
+        fill(150,75,0);
+        rect(x, floorPos_y - 80, 20, 80);
+        fill(0,100,0);
+        ellipse(x + 10, floorPos_y - 124, 120, 100)
+    }
+
+	pop()
+}
+
+function drawCollectable(t_collectable)
+{
+    var x = t_collectable.x_pos
+    var y = t_collectable.y_pos
+    
+	var center = {
+		x,
+		y: y - 18, 
+	}	
+
+	push()
+
+	fill(240,220,0);   
+	ellipse(center.x, center.y, 20, 30)
+	fill(255,255,0);   
+	ellipse(center.x, center.y, 15 , 20);
+	strokeWeight(3);
+	stroke(240,220,0); 
+	line(center.x - 8, center.y, center.x + 8, center.y);
+	pop()
+}
+
+function drawCanyon(t_canyon)
+{
+    var x = t_canyon.x_pos
+    var y = height
+    var canyon_width = t_canyon.width
+
+	push()
+	background
+	fill(100, 155, 255);
+
+	rect(x, floorPos_y, canyon_width, floorPos_y);
+	
+	// rocks
+	fill(100, 50, 0);
+	rect(x, y - 10, canyon_width, 10);
 	triangle(
-		x,y,
-		x + 150 * scaleFactor , y - 182 * scaleFactor,
-		x + 300 * scaleFactor, y
-	);
-	triangle(
-		x - 50, y, 
-		x + 50 * scaleFactor, y - 102 * scaleFactor,
-		x + 250 * scaleFactor, y
-	);
-	triangle(
-		x - 50, y,
-		x + 200 * scaleFactor, y - 152 * scaleFactor,
-		x + 350 * scaleFactor, y
+		x, y - 36,
+		x + 20, y,
+		x, y
 	)
 	triangle(
-		x - 50, y,
-		x + 300 * scaleFactor, y - 72 * scaleFactor,
-		x + 410 * scaleFactor, y
-	);
-
+		x + canyon_width, y - 36,
+		x + canyon_width - 20, y,
+		x + canyon_width, y
+	)
+	rect(x, floorPos_y, 3, floorPos_y);
+	rect(x + canyon_width - 3, floorPos_y, 3, floorPos_y);
 	pop()
 }
 
-function drawTrees(x, y) {
-	push()
-	fill(150,75,0);
-	rect(x, y - 80, 20, 80);
-	fill(0,100,0);
-	ellipse(x + 10, y - 124, 120, 100)
-	pop()
+function checkCollectable(t_collectable)
+{
+    if (dist(t_collectable.x_pos, t_collectable.y_pos, gameChar_x, gameChar_y) < 24) {
+        t_collectable.isFound = true
+    }
 }
 
+function checkCanyon(t_canyon) {
+    if (
+        gameChar_y > floorPos_y &&
+        gameChar_x > t_canyon.x_pos &&
+        gameChar_x < t_canyon.x_pos + t_canyon.width
+        
+    ) {
+        isPlummeting = true
+    }
+}
 
 function keyPressed()
 {
